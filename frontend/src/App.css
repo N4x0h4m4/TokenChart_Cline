@@ -2,6 +2,7 @@
   font-family: sans-serif;
   text-align: center;
   padding: 20px;
+  position: relative; /* 右上に配置するために親要素にrelativeを設定 */
 }
 
 h1 {
@@ -36,7 +37,34 @@ tbody tr:nth-child(odd) {
   color: red;
 }
 
-/* 右上に更新時刻を表示 */
+/* 左上にAPIの情報を表示 */
+.api-status {
+  position: absolute;
+  top: 10px;
+  left: 10px;  /* 左上に配置 */
+  font-size: 16px;
+  background-color: rgba(255, 255, 255, 0.7);
+  padding: 5px;
+  border-radius: 5px;
+  font-weight: bold;
+  display: flex;
+  align-items: center; /* アイテムを横並びに */
+}
+
+.api-switch-button {
+  margin-left: 10px; /* API情報とボタンの間にスペースを追加 */
+  padding: 10px 15px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.api-switch-button:hover {
+  background-color: #45a049;
+}
+
 .last-updated {
   position: absolute;
   top: 10px;
@@ -65,4 +93,30 @@ tbody tr:nth-child(odd) {
   height: 80px; /* チャートのセル高さを調整 */
   padding: 0; /* セル内のパディングを削除 */
   margin: 0; /* セル周りのマージンを削除 */
+}
+
+.warning {
+  font-size: 14px;
+  color: #f39c12;
+}
+
+.pagination button {
+  padding: 10px;
+  margin: 10px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+.pagination button:disabled {
+  background-color: #bdc3c7;
+}
+
+.manual-switch-btn {
+  padding: 10px 20px;
+  background-color: #2ecc71;
+  color: white;
+  border: none;
+  cursor: pointer;
 }
