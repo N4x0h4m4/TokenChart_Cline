@@ -23,7 +23,7 @@ function App() {
         setError(null); // 成功したらエラーをクリア
       } catch (error) {
         console.error("Error fetching token prices:", error);
-        setError("データを取得できませんでした。しばらく待ってから再度お試しください。");
+        setError("データを取得できませんでした。一定時間が経過すると自動的に表示されます。\nしばらくお待ちください。");
       }
     };
 
@@ -35,35 +35,43 @@ function App() {
 
   return (
     <div className="App">
-      <h1>仮想通貨リアルタイム価格比較</h1>
-      
+      <h1>トークン価格チャート</h1>
+
       {/* 注意書きの追加 */}
       <p className="warning">
-        CoinGeckoのAPI（無料プラン）のため、通常は1分間に10回までのリクエスト制限が想定されます（2025年現在）。
+        CoinGeckoのAPI（無料プラン）のため、1分間に10回までのリクエスト制限があります（2025年現在）。
       </p>
 
-      {error && <p className="error-message">{error}</p>}
-
-      <table>
-        <thead>
-          <tr>
-            <th>トークン</th>
-            <th>価格 (JPY)</th>
-            <th>24h 上昇率</th>
-          </tr>
-        </thead>
-        <tbody>
-          {tokens.map(token => (
-            <tr key={token.id}>
-              <td>{token.name} ({token.symbol.toUpperCase()})</td>
-              <td>{token.current_price}</td>
-              <td className={token.price_change_percentage_24h > 0 ? 'positive' : 'negative'}>
-                {token.price_change_percentage_24h ? `${token.price_change_percentage_24h.toFixed(2)}%` : 'N/A'}
-              </td>
-            </tr>
+      {error && (
+        <div className="error-message">
+          {error.split("\n").map((line, index) => (
+            <p key={index}>{line}</p>
           ))}
-        </tbody>
-      </table>
+        </div>
+      )}
+
+      {!error && (
+        <table>
+          <thead>
+            <tr>
+              <th>トークン</th>
+              <th>価格 (JPY)</th>
+              <th>24h 上昇率</th>
+            </tr>
+          </thead>
+          <tbody>
+            {tokens.map(token => (
+              <tr key={token.id}>
+                <td>{token.name} ({token.symbol.toUpperCase()})</td>
+                <td>{token.current_price}</td>
+                <td className={token.price_change_percentage_24h > 0 ? 'positive' : 'negative'}>
+                  {token.price_change_percentage_24h ? `${token.price_change_percentage_24h.toFixed(2)}%` : 'N/A'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }
