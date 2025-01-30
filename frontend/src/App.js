@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { Line } from 'react-chartjs-2';
+import { Chart, registerables } from 'chart.js';
 import './App.css';
+Chart.register(...registerables);
 
 function App() {
   const [tokens, setTokens] = useState([]);
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [historicalData, setHistoricalData] = useState({}); // 過去の価格データ
 
   useEffect(() => {
     let intervalId;
@@ -22,41 +26,98 @@ function App() {
             price_change_percentage: '24h'
           }
         });
-        setTokens(response.data);
-        setError(null); // 成功したらエラーをクリア
-        setLastUpdated(new Date().toLocaleString()); // 更新時刻を保存
+        const tokenData = response.data;
+        setTokens(tokenData);
+        setError(null);
+        setLastUpdated(new Date().toLocaleString());
 
-        // エラーがなければ通常の10秒間隔で更新
+        // 過去の価格データを取得
+        tokenData.forEach(token => {
+          fetchHistoricalPrice(token.id);
+        });
+
         if (!intervalId) {
           intervalId = setInterval(fetchTokenPrices, 10000);
         }
       } catch (error) {
         console.error("Error fetching token prices:", error);
         setError("データを取得できませんでした。一定時間が経過すると自動的に表示されます。\nしばらくお待ちください。");
-
-        // エラー発生時は 1 分後に再試行（既存の interval は停止）
         clearInterval(intervalId);
         setTimeout(fetchTokenPrices, 60000);
       }
     };
 
-    fetchTokenPrices(); // 初回データ取得
+    const fetchHistoricalPrice = async (tokenId) => {
+      try {
+        const historyResponse = await axios.get(`https://api.coingecko.com/api/v3/coins/${tokenId}/market_chart`, {
+          params: {
+            vs_currency: 'jpy',
+            days: '7', // 7日間のデータ
+            interval: 'daily'
+          }
+        });
+        const priceData = historyResponse.data.prices.map(price => ({
+          time: new Date(price[0]),
+          price: price[1]
+        }));
+        setHistoricalData(prevData => ({
+          ...prevData,
+          [tokenId]: priceData
+        }));
+      } catch (error) {
+        console.error(`Failed to fetch historical data for ${tokenId}`, error);
+      }
+    };
 
-    return () => clearInterval(intervalId); // コンポーネントのアンマウント時にクリーンアップ
+    fetchTokenPrices();
+
+    return () => clearInterval(intervalId);
   }, []);
+
+  const chartData = (tokenId) => {
+    const history = historicalData[tokenId] || [];
+    return {
+      labels: history.map(data => data.time.toLocaleDateString()),
+      datasets: [
+        {
+          label: '過去7日間の価格',
+          data: history.map(data => data.price),
+          fill: false,
+          borderColor: 'rgb(75, 192, 192)',
+          tension: 0.1
+        }
+      ]
+    };
+  };
+
+  const chartOptions = {
+    responsive: true,
+    scales: {
+      x: {
+        display: false // X軸を非表示
+      },
+      y: {
+        display: false // Y軸を非表示
+      }
+    },
+    plugins: {
+      legend: {
+        display: false // 凡例を非表示
+      }
+    }
+  };
+
 
   return (
     <div className="App">
       <h1>トークン価格チャート</h1>
 
-      {/* 更新時刻を右上に表示 */}
       {lastUpdated && (
         <div className="last-updated">
           最終更新: {lastUpdated}
         </div>
       )}
 
-      {/* 注意書きの追加 */}
       <p className="warning">
         CoinGeckoのAPI（無料プラン）のため、1分間に10回までのリクエスト制限があります（2025年現在）。
       </p>
@@ -76,6 +137,7 @@ function App() {
               <th>トークン</th>
               <th>価格 (JPY)</th>
               <th>24h 上昇率</th>
+              <th>過去7日間の価格チャート</th>
             </tr>
           </thead>
           <tbody>
@@ -85,6 +147,9 @@ function App() {
                 <td>{token.current_price}</td>
                 <td className={token.price_change_percentage_24h > 0 ? 'positive' : 'negative'}>
                   {token.price_change_percentage_24h ? `${token.price_change_percentage_24h.toFixed(2)}%` : 'N/A'}
+                </td>
+                <td className="chart-cell">
+                  <Line data={chartData(token.id)} options={chartOptions} width={80} height={60} />
                 </td>
               </tr>
             ))}

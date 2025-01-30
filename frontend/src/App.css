@@ -59,3 +59,10 @@ tbody tr:nth-child(odd) {
 .error-message p {
   margin: 5px 0;
 }
+
+.chart-cell {
+  width: 100px; /* チャートのセル幅を調整 */
+  height: 80px; /* チャートのセル高さを調整 */
+  padding: 0; /* セル内のパディングを削除 */
+  margin: 0; /* セル周りのマージンを削除 */
+}
