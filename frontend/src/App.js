@@ -4,6 +4,7 @@ import './App.css';
 
 function App() {
   const [tokens, setTokens] = useState([]);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchTokenPrices = async () => {
@@ -19,20 +20,30 @@ function App() {
           }
         });
         setTokens(response.data);
+        setError(null); // 成功したらエラーをクリア
       } catch (error) {
         console.error("Error fetching token prices:", error);
+        setError("データを取得できませんでした。しばらく待ってから再度お試しください。");
       }
     };
 
     fetchTokenPrices();
-    const intervalId = setInterval(fetchTokenPrices, 60000); // Update every minute
+    const intervalId = setInterval(fetchTokenPrices, 60000); // 1分ごとに更新
 
-    return () => clearInterval(intervalId); // Cleanup on unmount
+    return () => clearInterval(intervalId);
   }, []);
 
   return (
     <div className="App">
       <h1>仮想通貨リアルタイム価格比較</h1>
+      
+      {/* 注意書きの追加 */}
+      <p className="warning">
+        CoinGeckoのAPI（無料プラン）のため、1分間に10回までのリクエスト制限があります（2025年現在）。
+      </p>
+
+      {error && <p className="error-message">{error}</p>}
+
       <table>
         <thead>
           <tr>
