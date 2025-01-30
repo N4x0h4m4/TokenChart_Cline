@@ -35,3 +35,27 @@ tbody tr:nth-child(odd) {
 .negative {
   color: red;
 }
+
+/* 右上に更新時刻を表示 */
+.last-updated {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 14px;
+  color: #333;
+  background-color: rgba(255, 255, 255, 0.7);
+  padding: 5px;
+  border-radius: 5px;
+}
+
+.error-message {
+  color: red;
+  font-weight: bold;
+  margin: 20px 0;
+  text-align: center;
+  font-size: 18px;
+}
+
+.error-message p {
+  margin: 5px 0;
+}
