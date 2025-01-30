@@ -7,6 +7,8 @@ function App() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    let intervalId;
+
     const fetchTokenPrices = async () => {
       try {
         const response = await axios.get('https://api.coingecko.com/api/v3/coins/markets', {
@@ -21,21 +23,29 @@ function App() {
         });
         setTokens(response.data);
         setError(null); // 成功したらエラーをクリア
+
+        // エラーがなければ通常の10秒間隔で更新
+        if (!intervalId) {
+          intervalId = setInterval(fetchTokenPrices, 10000);
+        }
       } catch (error) {
         console.error("Error fetching token prices:", error);
         setError("データを取得できませんでした。一定時間が経過すると自動的に表示されます。\nしばらくお待ちください。");
+
+        // エラー発生時は 1 分後に再試行（既存の interval は停止）
+        clearInterval(intervalId);
+        setTimeout(fetchTokenPrices, 60000);
       }
     };
 
-    fetchTokenPrices();
-    const intervalId = setInterval(fetchTokenPrices, 60000); // 1分ごとに更新
+    fetchTokenPrices(); // 初回データ取得
 
-    return () => clearInterval(intervalId);
+    return () => clearInterval(intervalId); // コンポーネントのアンマウント時にクリーンアップ
   }, []);
 
   return (
     <div className="App">
-      <h1>トークン価格チャート</h1>
+      <h1>仮想通貨リアルタイム価格比較</h1>
 
       {/* 注意書きの追加 */}
       <p className="warning">
