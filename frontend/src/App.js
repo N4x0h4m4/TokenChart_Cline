@@ -5,6 +5,7 @@ import './App.css';
 function App() {
   const [tokens, setTokens] = useState([]);
   const [error, setError] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   useEffect(() => {
     let intervalId;
@@ -23,6 +24,7 @@ function App() {
         });
         setTokens(response.data);
         setError(null); // 成功したらエラーをクリア
+        setLastUpdated(new Date().toLocaleString()); // 更新時刻を保存
 
         // エラーがなければ通常の10秒間隔で更新
         if (!intervalId) {
@@ -45,7 +47,14 @@ function App() {
 
   return (
     <div className="App">
-      <h1>仮想通貨リアルタイム価格比較</h1>
+      <h1>トークン価格チャート</h1>
+
+      {/* 更新時刻を右上に表示 */}
+      {lastUpdated && (
+        <div className="last-updated">
+          最終更新: {lastUpdated}
+        </div>
+      )}
 
       {/* 注意書きの追加 */}
       <p className="warning">
