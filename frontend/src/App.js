@@ -39,7 +39,7 @@ function App() {
       
       {/* 注意書きの追加 */}
       <p className="warning">
-        CoinGeckoのAPI（無料プラン）のため、1分間に10回までのリクエスト制限があります（2025年現在）。
+        CoinGeckoのAPI（無料プラン）のため、通常は1分間に10回までのリクエスト制限が想定されます（2025年現在）。
       </p>
 
       {error && <p className="error-message">{error}</p>}
