@@ -1,3 +1,4 @@
+// frontend/src/App.js
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Line } from 'react-chartjs-2';
@@ -14,103 +15,49 @@ function App() {
   const [currentPage, setCurrentPage] = useState(1);
   const tokensPerPage = 3;
 
-  const [lastApi, setLastApi] = useState(null); // 初期値はnullに設定
-  const [nextApi, setNextApi] = useState(null);  // 初期値はnullに設定
-
   useEffect(() => {
-    // 初回レンダリング時にAPIの交互をランダムで設定
-    if (lastApi === null && nextApi === null) {
-      // ランダムでAPIを設定
-      const randomApi = Math.random() > 0.5 ? 'CoinGecko' : 'CoinMarketCap';
-      setLastApi(randomApi);
-      setNextApi(randomApi === 'CoinGecko' ? 'CoinMarketCap' : 'CoinGecko');
+    if (tokens.length > 0) {
+      tokens.forEach(token => {
+        fetchHistoricalPrice(token.symbol);
+      });
     }
-
-    fetchTokenPrices();
-
-  }, [currentPage]); // currentPageに依存
+  }, [tokens, currentPage]);
 
   const fetchTokenPrices = async () => {
     try {
-      let response;
-
-      // 現在使用中のAPIを使用
-      if (lastApi === 'CoinGecko') {
-        response = await axios.get('https://api.coingecko.com/api/v3/coins/markets', {
-          params: {
-            vs_currency: 'usd',
-            order: 'market_cap_desc',
-            per_page: 10,
-            page: currentPage,
-            sparkline: false,
-            price_change_percentage: '24h',
-          }
-        });
-      } else { // 次のAPIを使用
-        response = await axios.get('https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest', {
-          headers: {
-            'X-CMC_PRO_API_KEY': '716180a2-242e-421e-b83d-26e6ea2ca2d8'
-          },
-          params: {
-            start: (currentPage - 1) * tokensPerPage + 1,
-            limit: tokensPerPage,
-            convert: 'USD',
-            sort: 'market_cap',
-          }
-        });
-      }
-
+      // サーバーレス関数でAPIを呼び出す
+      const response = await axios.get('/api/crypto');
       const tokenData = response.data;
-      setTokens(tokenData);
+      setTokens(tokenData);  // 新しいデータをセット
       setError(null);
       setLastUpdated(new Date().toLocaleString());
 
+      // 各トークンの過去3日間のデータを取得
       tokenData.forEach(token => {
         fetchHistoricalPrice(token.id);
       });
-
-      // API呼び出し後にAPIの切り替え
-      setLastApi(nextApi);
-      setNextApi(lastApi);
-
     } catch (error) {
       console.error("Error fetching token prices:", error);
       setError("API呼出制限に達したためデータを取得できませんでした。再取得中。しばらくお待ちください。");
-
-      setLastUpdated(new Date().toLocaleString());  // エラーでも最終更新時刻は更新
+      setLastUpdated(new Date().toLocaleString());
     }
   };
 
   const fetchHistoricalPrice = async (tokenId) => {
     try {
-      let historyResponse;
+      const historyResponse = await axios.get(`https://pro-api.coinmarketcap.com/v1/cryptocurrency/ohlcv/historical`, {
+        headers: {
+          'X-CMC_PRO_API_KEY': '716180a2-242e-421e-b83d-26e6ea2ca2d8'
+        },
+        params: {
+          symbol: tokenId,
+          time_start: Math.floor(Date.now() / 1000) - 3 * 24 * 60 * 60,
+          time_end: Math.floor(Date.now() / 1000),
+          convert: 'USD',
+        }
+      });
 
-      if (lastApi === 'CoinGecko') {
-        historyResponse = await axios.get(`https://api.coingecko.com/api/v3/coins/${tokenId}/market_chart`, {
-          params: {
-            vs_currency: 'usd',
-            days: '3',
-            interval: 'daily',
-          }
-        });
-      } else {
-        historyResponse = await axios.get(`https://pro-api.coinmarketcap.com/v1/cryptocurrency/ohlcv/historical`, {
-          headers: {
-            'X-CMC_PRO_API_KEY': '716180a2-242e-421e-b83d-26e6ea2ca2d8'
-          },
-          params: {
-            symbol: tokenId,
-            time_start: Math.floor(Date.now() / 1000) - 3 * 24 * 60 * 60,
-            time_end: Math.floor(Date.now() / 1000),
-            convert: 'USD',
-          }
-        });
-      }
-
-      const priceData = historyResponse.data.prices ? historyResponse.data.prices.map(price => ({
-        time: new Date(price[0]),
-        price: price[1],
-      })) : historyResponse.data.data.map(price => ({
+      const priceData = historyResponse.data.data.map(price => ({
         time: new Date(price.timestamp * 1000),
         price: price.close,
       }));
@@ -163,28 +110,13 @@ function App() {
     setCurrentPage(page);
   };
 
-  const handleApiSwitch = async () => {
-    // APIの切り替え
-    setLastApi(nextApi);
-    setNextApi(lastApi);
-
-    // API呼び出し
-    await fetchTokenPrices(); // async関数を非同期に呼び出す
-  };
-
   return (
     <div className="App">
       <h1>トークン価格チャート</h1>
 
-      {/* 右上にAPI切り替えボタン */}
-      <div className="api-switch-button">
-        <button onClick={handleApiSwitch}>API 切り替え</button>
-      </div>
-
-      {/* 左上に表示するAPI情報 */}
-      <div className="api-status">
-        直前に呼び出したAPI: {lastApi} <br />
-        次に呼び出すAPI: {nextApi}
+      {/* 手動で最新の価格を取得するボタン */}
+      <div className="refresh-button">
+        <button onClick={fetchTokenPrices}>最新の価格を取得</button>
       </div>
 
       {lastUpdated && (
@@ -214,7 +146,7 @@ function App() {
               {displayedTokens.map(token => (
                 <tr key={token.id}>
                   <td>{token.name} ({token.symbol.toUpperCase()})</td>
-                  <td>{token.current_price ? token.current_price : token.quote.USD.price} USD</td>
+                  <td>{token.current_price} USD</td>
                   <td className={token.price_change_percentage_24h > 0 ? 'positive' : 'negative'}>
                     {token.price_change_percentage_24h ? `${token.price_change_percentage_24h.toFixed(2)}%` : 'N/A'}
                   </td>
