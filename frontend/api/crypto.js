@@ -1,31 +1,31 @@
-// frontend/api/cryptocompare.js
+// pages/api/crypto.js
+const API_KEY = '716180a2-242e-421e-b83d-26e6ea2ca2d8'; // CoinMarketCapのAPIキー
+const API_BASE_URL = 'https://pro-api.coinmarketcap.com/v1';
 
-const API_BASE_URL = 'https://min-api.cryptocompare.com/data';
-
-export const handler = async (req, res) => {
-  const API_KEY = 'a3e3c25cdc95609196071a4c8866a43560523dd1f36269665b6b506cdc46b118';
-
+export default async function handler(req, res) {
   try {
-    // トークン価格を取得するためのリクエスト
-    const response = await fetch(`${API_BASE_URL}/top/mktcapfull`, {
+    // CoinMarketCap APIから最新の暗号通貨データを取得
+    const response = await fetch(`${API_BASE_URL}/cryptocurrency/listings/latest`, {
       method: 'GET',
       headers: {
-        'Authorization': `Apikey ${API_KEY}`,
+        'X-CMC_PRO_API_KEY': API_KEY,
       },
       params: {
-        limit: '10', // 上位10のトークン
-        tsym: 'USD', // 米ドルで価格を表示
-      }
+        start: 1,
+        limit: 10,
+        convert: 'USD',
+        sort: 'market_cap',
+      },
     });
 
     if (!response.ok) {
-      throw new Error('Failed to fetch data from CryptoCompare');
+      return res.status(response.status).json({ error: 'Failed to fetch data from CoinMarketCap' });
     }
 
     const data = await response.json();
-    res.status(200).json(data.Data);  // CryptoCompareのレスポンスデータを返す
+    res.status(200).json(data.data);
   } catch (error) {
-    console.error('Error fetching data from CryptoCompare:', error);
-    res.status(500).json({ error: 'Failed to fetch data from CryptoCompare' });
+    console.error('Error fetching data from CoinMarketCap:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
-};
+}

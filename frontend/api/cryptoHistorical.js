@@ -15,6 +15,7 @@ export default async function handler(req, res) {
       headers: {
         'X-CMC_PRO_API_KEY': API_KEY,
       },
+      // パラメータをURLのクエリとして追加
       params: {
         symbol: tokenId,
         time_start: startTime,
