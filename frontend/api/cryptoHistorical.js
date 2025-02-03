@@ -6,6 +6,9 @@ export default async function handler(req, res) {
   const { tokenId } = req.query;  // トークンIDをURLクエリから取得
 
   try {
+    const endTime = Math.floor(Date.now() / 1000);  // 現在時刻
+    const startTime = endTime - 7 * 24 * 60 * 60; // 7日前の時刻
+
     // CoinMarketCap APIから過去7日間の暗号通貨データを取得
     const response = await fetch(`${API_BASE_URL}/cryptocurrency/ohlcv/historical`, {
       method: 'GET',
@@ -14,8 +17,8 @@ export default async function handler(req, res) {
       },
       params: {
         symbol: tokenId,
-        time_start: Math.floor(Date.now() / 1000) - 7 * 24 * 60 * 60, // 7日前から
-        time_end: Math.floor(Date.now() / 1000),  // 現在時刻
+        time_start: startTime,
+        time_end: endTime,
         convert: 'USD',
       },
     });

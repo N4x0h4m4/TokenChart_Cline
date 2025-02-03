@@ -1,5 +1,4 @@
-// frontend/src/App.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Line } from 'react-chartjs-2';
 import { Chart, registerables } from 'chart.js';
@@ -9,55 +8,39 @@ Chart.register(...registerables);
 
 function App() {
   const [tokens, setTokens] = useState([]);
+  const [historicalData, setHistoricalData] = useState({});
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
-  const [historicalData, setHistoricalData] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
   const tokensPerPage = 3;
 
-  useEffect(() => {
-    if (tokens.length > 0) {
-      tokens.forEach(token => {
-        fetchHistoricalPrice(token.symbol);
-      });
-    }
-  }, [tokens, currentPage]);
-
-  const fetchTokenPrices = async () => {
+  // fetchTokenPrices を useCallback でメモ化
+  const fetchTokenPrices = useCallback(async () => {
     try {
-      // サーバーレス関数でAPIを呼び出す
       const response = await axios.get('/api/crypto');
       const tokenData = response.data;
-      setTokens(tokenData);  // 新しいデータをセット
+      setTokens(tokenData);
       setError(null);
       setLastUpdated(new Date().toLocaleString());
 
-      // 各トークンの過去3日間のデータを取得
+      // 各トークンの過去7日間のデータを取得
       tokenData.forEach(token => {
-        fetchHistoricalPrice(token.id);
+        fetchHistoricalPrice(token.symbol);
       });
     } catch (error) {
       console.error("Error fetching token prices:", error);
       setError("API呼出制限に達したためデータを取得できませんでした。再取得中。しばらくお待ちください。");
       setLastUpdated(new Date().toLocaleString());
     }
-  };
+  }, []); // 空の依存配列で、コンポーネントが初めてレンダリングされる時に1回だけ実行
 
   const fetchHistoricalPrice = async (tokenId) => {
     try {
-      const historyResponse = await axios.get(`https://pro-api.coinmarketcap.com/v1/cryptocurrency/ohlcv/historical`, {
-        headers: {
-          'X-CMC_PRO_API_KEY': '716180a2-242e-421e-b83d-26e6ea2ca2d8'
-        },
-        params: {
-          symbol: tokenId,
-          time_start: Math.floor(Date.now() / 1000) - 3 * 24 * 60 * 60,
-          time_end: Math.floor(Date.now() / 1000),
-          convert: 'USD',
-        }
+      const historyResponse = await axios.get(`/api/cryptoHistorical`, {
+        params: { tokenId }
       });
 
-      const priceData = historyResponse.data.data.map(price => ({
+      const priceData = historyResponse.data.map(price => ({
         time: new Date(price.timestamp * 1000),
         price: price.close,
       }));
@@ -77,7 +60,7 @@ function App() {
       labels: history.map(data => data.time.toLocaleDateString()),
       datasets: [
         {
-          label: '過去3日間の価格',
+          label: '過去7日間の価格',
           data: history.map(data => data.price),
           fill: false,
           borderColor: 'rgb(75, 192, 192)',
@@ -91,10 +74,10 @@ function App() {
     responsive: true,
     scales: {
       x: {
-        display: false,
+        display: true,
       },
       y: {
-        display: false,
+        display: true,
       },
     },
     plugins: {
@@ -109,6 +92,11 @@ function App() {
   const handlePageChange = (page) => {
     setCurrentPage(page);
   };
+
+  // 初回レンダリング時にデータを取得
+  useEffect(() => {
+    fetchTokenPrices();
+  }, [fetchTokenPrices]);
 
   return (
     <div className="App">
@@ -139,19 +127,19 @@ function App() {
                 <th>トークン</th>
                 <th>価格 (USD)</th>
                 <th>24h 上昇率</th>
-                <th>過去3日間の価格チャート</th>
+                <th>過去7日間の価格チャート</th>
               </tr>
             </thead>
             <tbody>
               {displayedTokens.map(token => (
                 <tr key={token.id}>
                   <td>{token.name} ({token.symbol.toUpperCase()})</td>
-                  <td>{token.current_price} USD</td>
-                  <td className={token.price_change_percentage_24h > 0 ? 'positive' : 'negative'}>
-                    {token.price_change_percentage_24h ? `${token.price_change_percentage_24h.toFixed(2)}%` : 'N/A'}
+                  <td>{token.quote.USD.price.toFixed(2)} USD</td>
+                  <td className={token.quote.USD.percent_change_24h > 0 ? 'positive' : 'negative'}>
+                    {token.quote.USD.percent_change_24h ? `${token.quote.USD.percent_change_24h.toFixed(2)}%` : 'N/A'}
                   </td>
                   <td className="chart-cell">
-                    <Line data={chartData(token.id)} options={chartOptions} width={80} height={60} />
+                    <Line data={chartData(token.symbol)} options={chartOptions} width={80} height={60} />
                   </td>
                 </tr>
               ))}
